@@ -1,5 +1,11 @@
 __pycache__
+.venv
 .cache
+# not committed: this is a published library, so every consumer resolves on its
+# own. The Delta Chat core (deltachat-rpc-server) is deliberately not pinned here
+# either: it is released ahead of the bindings and the runtime tracks its latest
+# release, installed/upgraded as a user-level tool (`uv tool upgrade ...`).
+uv.lock
 .mypy_cache
 .pytest_cache
 build

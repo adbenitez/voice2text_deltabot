@@ -7,7 +7,7 @@ name = "voice2text-deltabot"
 description = "Delta Chat bot to extract text from voice messages"
 dynamic = ["version"]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 keywords = ["deltachat", "bot"]
 authors = [
   {name = "adbenitez", email = "adb@arcanechat.me"},
@@ -17,26 +17,48 @@ classifiers = [
   "Programming Language :: Python",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
+# hooks.py targets the deltabot-cli 9.x / deltachat2 2.x API
+# (Event/Viewtype/MessageData instead of CoreEvent/MessageViewtype/MsgData).
+# Python 3.13 only: settled minimum for this fork (3.10 is out anyway —
+# faster-whisper -> onnxruntime>=1.24 dropped cp310 wheels).
 dependencies = [
-    "deltabot-cli>=8.0.0,<9.0",
-    "faster-whisper",
+    "deltabot-cli>=9.1.0,<10.0",
+    # Do not bump the core (deltachat-rpc-server) on its own: deltabot-cli requires
+    # deltachat2[full], which ties the core to the bindings version, and the
+    # bindings (2.58.0, newest on PyPI) cannot read a newer core's JSON. Core 2.62+
+    # dropped Contact.is_verified, so every incoming message dies with
+    # `dacite MissingValueError: missing value for field "sender.is_verified"`
+    # inside the framework, before any hook runs. Both move together on a
+    # deltachat2 release.
+    "deltachat2[full]>=2.58.0,<3.0",
+    "faster-whisper>=1.2.1,<2.0",
+    # PyAV 19 dropped the metadata_encoding/metadata_errors arguments of av.open(),
+    # which faster-whisper 1.2.1 still passes: transcription fails on every message.
+    "av>=11,<19",
 ]
-
 [project.urls]
 Homepage = "https://github.com/deltachat-bot/voice2text_deltabot"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
   "black",
-  "mypy",
   "isort",
-  "pylint",
+  "mypy",
   "pylama",
+  "pylint",
   "pytest",
+  # pylama 8.x still imports pkg_resources, removed in setuptools 81;
+  # uv venvs do not ship setuptools at all.
+  "setuptools<81",
 ]
 
 [project.scripts]
 voice2text-bot = "voice2text_deltabot:main"
+
+[tool.setuptools]
+# flat-layout auto-discovery refuses to build as soon as a second top-level
+# directory appears (contrib/, etc.): name the package explicitly
+packages = ["voice2text_deltabot"]
 
 [tool.setuptools_scm]
 # can be empty if no extra settings are needed, presence enables setuptools_scm
@@ -44,6 +66,11 @@ version_file = "voice2text_deltabot/_version.py"
 
 [tool.isort]
 profile = "black"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# pylama ships a pytest11 entry point whose hook signature is invalid for pytest 9.
+addopts = "-p no:pylama"
 
 [tool.mypy]
 ignore_missing_imports = "True"

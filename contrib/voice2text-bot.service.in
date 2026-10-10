@@ -1,0 +1,20 @@
+[Unit]
+Description=Voice To Text bot (Delta Chat voice -> text)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO@
+# deltachat2 starts a bare "deltachat-rpc-server" and that binary lives in the
+# project venv (put there by `uv sync` from the deltachat2[full] extra). Without
+# the venv on PATH the service dies with
+#   FileNotFoundError: [Errno 2] No such file or directory: 'deltachat-rpc-server'
+# Keep the core in sync with the bindings: a newer core cannot be read by them,
+# see the note in pyproject.toml.
+Environment=PATH=@REPO@/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=@EXEC@
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
